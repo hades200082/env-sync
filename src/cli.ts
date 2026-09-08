@@ -5,8 +5,9 @@ import { createRequire } from "node:module";
 import { parseArgs, type ParseArgsConfig } from "node:util";
 import { globalConfigPath, loadConfig } from "./config.js";
 import { c, log, setVerbose } from "./log.js";
-import { describePlatform, detectPlatform } from "./platform.js";
+import { describePlatform, detectPlatform, platformEnvVars } from "./platform.js";
 import { runAll, summarize, type RunnerOptions } from "./runner.js";
+import { defaultShell } from "./shell.js";
 import { starterConfig } from "./template.js";
 import { checkForNewerVersion } from "./update-check.js";
 import { ConfigError } from "./validate.js";
@@ -92,6 +93,11 @@ async function main(argv: string[]): Promise<number> {
     console.log(`${c.bold("Platform:")}  ${describePlatform(platform)}`);
     console.log(`${c.bold("Selectors:")} ${platform.selectors.join(", ")}`);
     console.log(c.dim("A platform map picks the first selector above that it has a key for."));
+    console.log("");
+    console.log(c.bold("Variables your commands can read:"));
+    for (const [k, v] of Object.entries(platformEnvVars(platform, defaultShell(platform.os)))) {
+      console.log(`  ${k}=${v}`);
+    }
     return 0;
   }
 
@@ -127,11 +133,7 @@ async function main(argv: string[]): Promise<number> {
     }
   }
 
-  process.env.ENVSYNC_OS = platform.os;
-  process.env.ENVSYNC_ID = platform.id;
-  process.env.ENVSYNC_VERSION = platform.version;
-  process.env.ENVSYNC_ARCH = platform.arch;
-  process.env.ENVSYNC_SELECTORS = platform.selectors.join(",");
+  Object.assign(process.env, platformEnvVars(platform));
 
   log.info(`${c.bold("envsync")} ${pkg.version}  ${c.dim(describePlatform(platform))}`);
   log.info(`${c.dim("config:")} ${loaded.origin}`);

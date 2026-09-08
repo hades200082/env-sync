@@ -15,6 +15,13 @@ export interface PlatformFacts {
   procVersion?: string;
   /** Which of the known package manager binaries are on PATH. */
   hasBinary: (name: string) => boolean;
+  /** Environment variables, used to spot agents, CI and hosted workspaces. */
+  env: NodeJS.ProcessEnv;
+  /** Files that mark a container. */
+  hasFile: (file: string) => boolean;
+  uid: number | undefined;
+  stdinTty: boolean;
+  stdoutTty: boolean;
 }
 
 interface PackageManager {
@@ -55,6 +62,11 @@ export function gatherFacts(): PlatformFacts {
     arch: process.arch,
     release: os.release(),
     hasBinary: (name) => findOnPath(name) !== undefined,
+    env: process.env,
+    hasFile: (file) => fs.existsSync(file),
+    uid: typeof process.getuid === "function" ? process.getuid() : undefined,
+    stdinTty: Boolean(process.stdin.isTTY),
+    stdoutTty: Boolean(process.stdout.isTTY),
   };
   if (process.platform === "linux") {
     const osRelease = read("/etc/os-release") ?? read("/usr/lib/os-release");
@@ -92,19 +104,67 @@ export function detectPlatform(facts: PlatformFacts = gatherFacts()): Platform {
     (pm) => pm.os.includes(osFamily) && pm.binaries.some((b) => facts.hasBinary(b)),
   ).map((pm) => pm.selector);
 
-  const selectors = buildSelectors({ os: osFamily, id, version, like, packageManagers, arch, wsl });
-  return { os: osFamily, id, version, like, packageManagers, arch, wsl, selectors };
+  const environment = detectEnvironment(facts, wsl);
+  const root = facts.uid === 0;
+  const sudo = osFamily !== "windows" && !root && facts.hasBinary("sudo") ? "sudo" : "";
+  const partial: Omit<Platform, "selectors"> = {
+    os: osFamily,
+    id,
+    version,
+    like,
+    packageManagers,
+    arch,
+    wsl,
+    environment,
+    interactive: facts.stdinTty && facts.stdoutTty,
+    root,
+    sudo,
+    terminal: detectTerminal(facts.env),
+  };
+  return { ...partial, selectors: buildSelectors(partial) };
+}
+
+/**
+ * Things about where we run that are not the OS. Ordered: agent sandboxes,
+ * hosted workspaces, CI, container, WSL.
+ */
+export function detectEnvironment(facts: Pick<PlatformFacts, "env" | "hasFile">, wsl: boolean): string[] {
+  const env = facts.env;
+  const out: string[] = [];
+  const truthy = (v: string | undefined) => v !== undefined && v !== "" && v !== "0" && v.toLowerCase() !== "false";
+  if (truthy(env.CLAUDECODE) || truthy(env.CLAUDE_CODE_ENTRYPOINT)) out.push("claude-code");
+  // Codex sets CODEX_SANDBOX / CODEX_SANDBOX_NETWORK_DISABLED and friends.
+  if (Object.keys(env).some((k) => k.startsWith("CODEX_"))) out.push("codex");
+  if (truthy(env.CODESPACES)) out.push("codespaces");
+  if (truthy(env.GITPOD_WORKSPACE_ID)) out.push("gitpod");
+  if (truthy(env.CI) || truthy(env.GITHUB_ACTIONS)) out.push("ci");
+  const inContainer =
+    facts.hasFile("/.dockerenv") ||
+    facts.hasFile("/run/.containerenv") ||
+    truthy(env.container) ||
+    truthy(env.KUBERNETES_SERVICE_HOST);
+  if (inContainer) out.push("container");
+  if (wsl) out.push("wsl");
+  return out;
+}
+
+export function detectTerminal(env: NodeJS.ProcessEnv): string {
+  if (env.TERM_PROGRAM) return env.TERM_PROGRAM;
+  if (env.WT_SESSION) return "windows-terminal";
+  return "";
 }
 
 /**
  * Selector order, most specific first:
- *   id-version, id-major, id, ID_LIKE entries, package managers, wsl, os family, unix, default
+ *   environment (claude-code, codex, codespaces, gitpod, ci, container, wsl),
+ *   id-version, id-major, id, ID_LIKE entries, package managers, os family, unix, default
  */
 export function buildSelectors(p: Omit<Platform, "selectors">): string[] {
   const out: string[] = [];
   const push = (s: string) => {
     if (s && !out.includes(s)) out.push(s);
   };
+  for (const e of p.environment) push(e);
   if (p.version) {
     push(`${p.id}-${p.version}`);
     const major = p.version.split(".")[0];
@@ -113,7 +173,6 @@ export function buildSelectors(p: Omit<Platform, "selectors">): string[] {
   push(p.id);
   for (const l of p.like) push(l);
   for (const pm of p.packageManagers) push(pm);
-  if (p.wsl) push("wsl");
   push(p.os);
   if (p.os !== "windows") push("unix");
   push("default");
@@ -165,7 +224,25 @@ export function windowsVersion(release: string): string {
 export function describePlatform(p: Platform): string {
   const bits = [`${p.id}${p.version ? " " + p.version : ""}`, p.arch];
   if (p.like.length) bits.push(`like: ${p.like.join(", ")}`);
-  if (p.wsl) bits.push("wsl");
+  if (p.environment.length) bits.push(`env: ${p.environment.join(", ")}`);
   if (p.packageManagers.length) bits.push(`package managers: ${p.packageManagers.join(", ")}`);
   return bits.join(" | ");
+}
+
+/** Environment variables every command can read. */
+export function platformEnvVars(p: Platform, shell?: string): Record<string, string> {
+  const vars: Record<string, string> = {
+    ENVSYNC_OS: p.os,
+    ENVSYNC_ID: p.id,
+    ENVSYNC_VERSION: p.version,
+    ENVSYNC_ARCH: p.arch,
+    ENVSYNC_SELECTORS: p.selectors.join(","),
+    ENVSYNC_ENV: p.environment.join(","),
+    ENVSYNC_INTERACTIVE: p.interactive ? "1" : "0",
+    ENVSYNC_ROOT: p.root ? "1" : "0",
+    ENVSYNC_SUDO: p.sudo,
+    ENVSYNC_TERMINAL: p.terminal,
+  };
+  if (shell) vars.ENVSYNC_SHELL = shell;
+  return vars;
 }

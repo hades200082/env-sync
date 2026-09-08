@@ -60,6 +60,19 @@ export interface Platform {
   packageManagers: string[];
   arch: string;
   wsl: boolean;
+  /**
+   * Where the run is happening, beyond the OS: `claude-code`, `codex`,
+   * `codespaces`, `gitpod`, `ci`, `container`, `wsl`. Empty on a plain machine.
+   */
+  environment: string[];
+  /** stdin and stdout are both terminals. */
+  interactive: boolean;
+  /** Running as uid 0 (never true on Windows). */
+  root: boolean;
+  /** `sudo` when a privilege prefix is needed and available, else empty. */
+  sudo: string;
+  /** TERM_PROGRAM, `windows-terminal`, or empty. */
+  terminal: string;
   /** Ordered most specific first. The first key found in a platform map wins. */
   selectors: string[];
 }

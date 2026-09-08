@@ -199,10 +199,12 @@ async function runCheck(name: string, command: ResolvedCommand, ctx: Context): P
   }
   log.debug(`${name}: check: ${run}`);
   try {
-    const result = await runShell(pickShell(command, ctx), run, ctx.platform, {
+    const shell = pickShell(command, ctx);
+    const result = await runShell(shell, run, ctx.platform, {
       capture: true,
       failFast: command.failFast,
       timeoutMs: 120_000,
+      env: { ...process.env, ENVSYNC_SHELL: shell },
     });
     log.debug(`${name}: check exit ${result.code}`);
     return result.code === 0;
@@ -214,7 +216,11 @@ async function runCheck(name: string, command: ResolvedCommand, ctx: Context): P
 
 async function execute(command: ResolvedCommand, ctx: Context): Promise<number> {
   try {
-    const result = await runShell(pickShell(command, ctx), command.run, ctx.platform, { failFast: command.failFast });
+    const shell = pickShell(command, ctx);
+    const result = await runShell(shell, command.run, ctx.platform, {
+      failFast: command.failFast,
+      env: { ...process.env, ENVSYNC_SHELL: shell },
+    });
     return result.code;
   } catch (err) {
     log.error(null, `could not start shell: ${(err as Error).message}`);

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildSelectors,
+  detectEnvironment,
+  platformEnvVars,
   darwinToMacosVersion,
   detectPlatform,
   parseOsRelease,
@@ -34,6 +36,11 @@ function facts(overrides: Partial<PlatformFacts>): PlatformFacts {
     arch: "x64",
     release: "6.8.0",
     hasBinary: () => false,
+    env: {},
+    hasFile: () => false,
+    uid: 1000,
+    stdinTty: true,
+    stdoutTty: true,
     ...overrides,
   };
 }
@@ -79,7 +86,7 @@ test("WSL adds a wsl selector before the linux family", () => {
     facts({ osRelease: UBUNTU, procVersion: "Linux version 5.15.153.1-microsoft-standard-WSL2" }),
   );
   assert.ok(p.wsl);
-  assert.deepEqual(p.selectors, ["ubuntu-24.04", "ubuntu-24", "ubuntu", "debian", "wsl", "linux", "unix", "default"]);
+  assert.deepEqual(p.selectors, ["wsl", "ubuntu-24.04", "ubuntu-24", "ubuntu", "debian", "linux", "unix", "default"]);
 });
 
 test("macOS maps the Darwin version and lists brew", () => {
@@ -110,11 +117,61 @@ test("Darwin to macOS version", () => {
 });
 
 test("buildSelectors de-duplicates", () => {
-  const s = buildSelectors({ os: "linux", id: "debian", version: "12", like: ["debian"], packageManagers: [], arch: "x64", wsl: false });
+  const s = buildSelectors({
+    os: "linux", id: "debian", version: "12", like: ["debian"], packageManagers: [], arch: "x64", wsl: false,
+    environment: [], interactive: true, root: false, sudo: "", terminal: "",
+  });
   assert.deepEqual(s, ["debian-12", "debian", "linux", "unix", "default"]);
 });
 
 test("missing os-release still yields usable selectors", () => {
   const p = detectPlatform(facts({}));
   assert.deepEqual(p.selectors, ["linux", "unix", "default"]);
+});
+
+test("agent, CI and container environments come first in the selector list", () => {
+  const p = detectPlatform(
+    facts({
+      osRelease: UBUNTU,
+      hasBinary: (b) => b === "apt-get",
+      env: { CLAUDECODE: "1", CI: "true" },
+      hasFile: (f) => f === "/.dockerenv",
+      uid: 0,
+    }),
+  );
+  assert.deepEqual(p.environment, ["claude-code", "ci", "container"]);
+  assert.deepEqual(p.selectors.slice(0, 4), ["claude-code", "ci", "container", "ubuntu-24.04"]);
+  assert.equal(p.root, true);
+  assert.equal(p.sudo, "", "root needs no sudo");
+});
+
+test("sudo is offered only when not root and sudo exists", () => {
+  const withSudo = detectPlatform(facts({ osRelease: UBUNTU, hasBinary: (b) => b === "sudo" }));
+  assert.equal(withSudo.sudo, "sudo");
+  const noSudo = detectPlatform(facts({ osRelease: UBUNTU }));
+  assert.equal(noSudo.sudo, "");
+  const windows = detectPlatform(facts({ nodePlatform: "win32", release: "10.0.26200", uid: undefined, hasBinary: (b) => b === "sudo" }));
+  assert.equal(windows.sudo, "");
+});
+
+test("detectEnvironment spots codex, codespaces, gitpod and podman", () => {
+  const env = { CODEX_SANDBOX_NETWORK_DISABLED: "1", CODESPACES: "true", GITPOD_WORKSPACE_ID: "x", container: "podman" };
+  assert.deepEqual(detectEnvironment({ env, hasFile: () => false }, true), ["codex", "codespaces", "gitpod", "container", "wsl"]);
+  assert.deepEqual(detectEnvironment({ env: { CI: "false", CLAUDECODE: "0" }, hasFile: () => false }, false), []);
+});
+
+test("interactive needs both stdin and stdout to be terminals", () => {
+  assert.equal(detectPlatform(facts({ stdinTty: false })).interactive, false);
+  assert.equal(detectPlatform(facts({})).interactive, true);
+});
+
+test("platformEnvVars exposes the facts commands need", () => {
+  const p = detectPlatform(facts({ osRelease: MINT, hasBinary: (b) => b === "apt-get" || b === "sudo", env: { TERM_PROGRAM: "vscode" } }));
+  const vars = platformEnvVars(p, "bash");
+  assert.equal(vars.ENVSYNC_ID, "linuxmint");
+  assert.equal(vars.ENVSYNC_SUDO, "sudo");
+  assert.equal(vars.ENVSYNC_TERMINAL, "vscode");
+  assert.equal(vars.ENVSYNC_SHELL, "bash");
+  assert.equal(vars.ENVSYNC_INTERACTIVE, "1");
+  assert.ok(vars.ENVSYNC_SELECTORS!.startsWith("linuxmint-22.1,"));
 });

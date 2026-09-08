@@ -47,6 +47,11 @@ const platform: Platform = {
   packageManagers: [],
   arch: process.arch,
   wsl: false,
+  environment: [],
+  interactive: false,
+  root: false,
+  sudo: "",
+  terminal: "",
   selectors: ["default"],
 };
 

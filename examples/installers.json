@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/hades200082/env-sync/master/schema.json",
+  "tools": [
+    {
+      "name": "proto",
+      "description": "Installer script: bash <(curl ...) on Linux and macOS, irm | iex on Windows",
+      "check": "proto",
+      "install": {
+        "unix": "bash <(curl -fsSL https://moonrepo.dev/install/proto.sh)",
+        "windows": "irm https://moonrepo.dev/install/proto.ps1 | iex"
+      },
+      "update": "proto upgrade"
+    },
+    {
+      "name": "uv",
+      "description": "Installer script that only needs sh, so it works even where bash is missing",
+      "check": "uv",
+      "install": {
+        "unix": { "run": "curl -LsSf https://astral.sh/uv/install.sh | sh", "shell": "sh" },
+        "windows": "irm https://astral.sh/uv/install.ps1 | iex"
+      },
+      "update": "uv self update"
+    },
+    {
+      "name": "gh",
+      "description": "Package manager on your own machines, plain apt-get as root in a container or agent sandbox",
+      "check": "gh",
+      "install": {
+        "apt": "$ENVSYNC_SUDO apt-get update && $ENVSYNC_SUDO apt-get install -y gh",
+        "dnf": "$ENVSYNC_SUDO dnf install -y gh",
+        "brew": "brew install gh",
+        "winget": "winget install --id GitHub.cli --exact --accept-source-agreements --accept-package-agreements"
+      },
+      "update": {
+        "apt": "$ENVSYNC_SUDO apt-get update && $ENVSYNC_SUDO apt-get install -y --only-upgrade gh",
+        "dnf": "$ENVSYNC_SUDO dnf upgrade -y gh",
+        "brew": "brew upgrade gh || true",
+        "winget": "winget upgrade --id GitHub.cli --exact --accept-source-agreements --accept-package-agreements"
+      }
+    },
+    {
+      "name": "lazygit",
+      "description": "Download a release binary by hand. Steps stop at the first failure.",
+      "check": "lazygit",
+      "install": {
+        "linux": [
+          "version=$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep -Po '\"tag_name\": *\"v\\K[^\"]*')",
+          "arch=$(uname -m | sed -e 's/aarch64/arm64/' -e 's/x86_64/x86_64/')",
+          "curl -fsSLo /tmp/lazygit.tar.gz \"https://github.com/jesseduffield/lazygit/releases/download/v${version}/lazygit_${version}_Linux_${arch}.tar.gz\"",
+          "mkdir -p \"$HOME/.local/bin\"",
+          "tar -xzf /tmp/lazygit.tar.gz -C \"$HOME/.local/bin\" lazygit",
+          "rm -f /tmp/lazygit.tar.gz"
+        ],
+        "brew": "brew install lazygit",
+        "windows": [
+          "$release = Invoke-RestMethod https://api.github.com/repos/jesseduffield/lazygit/releases/latest",
+          "$asset = $release.assets | Where-Object name -like '*Windows_x86_64.zip' | Select-Object -First 1",
+          "$dir = Join-Path $env:LOCALAPPDATA 'Programs\\lazygit'",
+          "New-Item -ItemType Directory -Force -Path $dir | Out-Null",
+          "Invoke-WebRequest $asset.browser_download_url -OutFile \"$env:TEMP\\lazygit.zip\"",
+          "Expand-Archive \"$env:TEMP\\lazygit.zip\" -DestinationPath $dir -Force",
+          "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $dir, 'User')"
+        ]
+      }
+    },
+    {
+      "name": "claude-skills",
+      "description": "Only worth running where Claude Code is in play: your own machines and its sandboxes",
+      "install": "npx -y skills@latest add mattpocock/skills -a claude-code -g -y",
+      "update": "npx -y skills@latest update -g -y"
+    },
+    {
+      "name": "sandbox-only-setup",
+      "description": "Runs only inside an agent sandbox, CI or a container",
+      "platforms": ["claude-code", "codex", "ci", "container"],
+      "install": {
+        "unix": "echo \"running in: $ENVSYNC_ENV as $(id -un)\"",
+        "windows": "Write-Output \"running in: $env:ENVSYNC_ENV\""
+      }
+    }
+  ]
+}

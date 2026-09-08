@@ -32,6 +32,15 @@ test("the starter config passes and matches examples/envsync.json", () => {
   assert.equal(example.replace(/\r\n/g, "\n"), text, "examples/envsync.json is out of date; regenerate it from starterConfig()");
 });
 
+test("every file in examples/ is a valid config", () => {
+  const dir = path.join(repoRoot, "examples");
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+  assert.ok(files.length >= 2);
+  for (const f of files) {
+    validateConfig(parseJsonc(fs.readFileSync(path.join(dir, f), "utf8")));
+  }
+});
+
 test("reports every problem at once", () => {
   const p = problems({
     bogus: 1,
