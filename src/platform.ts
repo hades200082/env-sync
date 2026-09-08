@@ -104,7 +104,7 @@ export function detectPlatform(facts: PlatformFacts = gatherFacts()): Platform {
     (pm) => pm.os.includes(osFamily) && pm.binaries.some((b) => facts.hasBinary(b)),
   ).map((pm) => pm.selector);
 
-  const environment = detectEnvironment(facts, wsl);
+  const host = detectHost(facts, wsl);
   const root = facts.uid === 0;
   const sudo = osFamily !== "windows" && !root && facts.hasBinary("sudo") ? "sudo" : "";
   const partial: Omit<Platform, "selectors"> = {
@@ -115,7 +115,7 @@ export function detectPlatform(facts: PlatformFacts = gatherFacts()): Platform {
     packageManagers,
     arch,
     wsl,
-    environment,
+    host,
     interactive: facts.stdinTty && facts.stdoutTty,
     root,
     sudo,
@@ -128,7 +128,7 @@ export function detectPlatform(facts: PlatformFacts = gatherFacts()): Platform {
  * Things about where we run that are not the OS. Ordered: agent sandboxes,
  * hosted workspaces, CI, container, WSL.
  */
-export function detectEnvironment(facts: Pick<PlatformFacts, "env" | "hasFile">, wsl: boolean): string[] {
+export function detectHost(facts: Pick<PlatformFacts, "env" | "hasFile">, wsl: boolean): string[] {
   const env = facts.env;
   const out: string[] = [];
   const truthy = (v: string | undefined) => v !== undefined && v !== "" && v !== "0" && v.toLowerCase() !== "false";
@@ -156,7 +156,7 @@ export function detectTerminal(env: NodeJS.ProcessEnv): string {
 
 /**
  * Selector order, most specific first:
- *   environment (claude-code, codex, codespaces, gitpod, ci, container, wsl),
+ *   host (claude-code, codex, codespaces, gitpod, ci, container, wsl),
  *   id-version, id-major, id, ID_LIKE entries, package managers, os family, unix, default
  */
 export function buildSelectors(p: Omit<Platform, "selectors">): string[] {
@@ -164,7 +164,7 @@ export function buildSelectors(p: Omit<Platform, "selectors">): string[] {
   const push = (s: string) => {
     if (s && !out.includes(s)) out.push(s);
   };
-  for (const e of p.environment) push(e);
+  for (const e of p.host) push(e);
   if (p.version) {
     push(`${p.id}-${p.version}`);
     const major = p.version.split(".")[0];
@@ -224,7 +224,7 @@ export function windowsVersion(release: string): string {
 export function describePlatform(p: Platform): string {
   const bits = [`${p.id}${p.version ? " " + p.version : ""}`, p.arch];
   if (p.like.length) bits.push(`like: ${p.like.join(", ")}`);
-  if (p.environment.length) bits.push(`env: ${p.environment.join(", ")}`);
+  if (p.host.length) bits.push(`host: ${p.host.join(", ")}`);
   if (p.packageManagers.length) bits.push(`package managers: ${p.packageManagers.join(", ")}`);
   return bits.join(" | ");
 }
@@ -237,7 +237,7 @@ export function platformEnvVars(p: Platform, shell?: string): Record<string, str
     ENVSYNC_VERSION: p.version,
     ENVSYNC_ARCH: p.arch,
     ENVSYNC_SELECTORS: p.selectors.join(","),
-    ENVSYNC_ENV: p.environment.join(","),
+    ENVSYNC_HOST: p.host.join(","),
     ENVSYNC_INTERACTIVE: p.interactive ? "1" : "0",
     ENVSYNC_ROOT: p.root ? "1" : "0",
     ENVSYNC_SUDO: p.sudo,

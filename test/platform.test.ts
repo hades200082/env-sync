@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildSelectors,
-  detectEnvironment,
+  detectHost,
   platformEnvVars,
   darwinToMacosVersion,
   detectPlatform,
@@ -119,7 +119,7 @@ test("Darwin to macOS version", () => {
 test("buildSelectors de-duplicates", () => {
   const s = buildSelectors({
     os: "linux", id: "debian", version: "12", like: ["debian"], packageManagers: [], arch: "x64", wsl: false,
-    environment: [], interactive: true, root: false, sudo: "", terminal: "",
+    host: [], interactive: true, root: false, sudo: "", terminal: "",
   });
   assert.deepEqual(s, ["debian-12", "debian", "linux", "unix", "default"]);
 });
@@ -129,7 +129,7 @@ test("missing os-release still yields usable selectors", () => {
   assert.deepEqual(p.selectors, ["linux", "unix", "default"]);
 });
 
-test("agent, CI and container environments come first in the selector list", () => {
+test("agent, CI and container hosts come first in the selector list", () => {
   const p = detectPlatform(
     facts({
       osRelease: UBUNTU,
@@ -139,7 +139,7 @@ test("agent, CI and container environments come first in the selector list", () 
       uid: 0,
     }),
   );
-  assert.deepEqual(p.environment, ["claude-code", "ci", "container"]);
+  assert.deepEqual(p.host, ["claude-code", "ci", "container"]);
   assert.deepEqual(p.selectors.slice(0, 4), ["claude-code", "ci", "container", "ubuntu-24.04"]);
   assert.equal(p.root, true);
   assert.equal(p.sudo, "", "root needs no sudo");
@@ -154,10 +154,10 @@ test("sudo is offered only when not root and sudo exists", () => {
   assert.equal(windows.sudo, "");
 });
 
-test("detectEnvironment spots codex, codespaces, gitpod and podman", () => {
+test("detectHost spots codex, codespaces, gitpod and podman", () => {
   const env = { CODEX_SANDBOX_NETWORK_DISABLED: "1", CODESPACES: "true", GITPOD_WORKSPACE_ID: "x", container: "podman" };
-  assert.deepEqual(detectEnvironment({ env, hasFile: () => false }, true), ["codex", "codespaces", "gitpod", "container", "wsl"]);
-  assert.deepEqual(detectEnvironment({ env: { CI: "false", CLAUDECODE: "0" }, hasFile: () => false }, false), []);
+  assert.deepEqual(detectHost({ env, hasFile: () => false }, true), ["codex", "codespaces", "gitpod", "container", "wsl"]);
+  assert.deepEqual(detectHost({ env: { CI: "false", CLAUDECODE: "0" }, hasFile: () => false }, false), []);
 });
 
 test("interactive needs both stdin and stdout to be terminals", () => {

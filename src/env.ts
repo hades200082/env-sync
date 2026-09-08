@@ -33,16 +33,22 @@ export async function refreshEnvironment(
  * entries only the current process had. Other variables are only added when
  * missing, so nothing the user set for this run is overwritten.
  * Returns the PATH entries that were new.
+ *
+ * `windows` selects the PATH rules: `;` as the separator, case-insensitive
+ * names and entries. It is a parameter rather than read from the host so
+ * the Windows rules can be tested on any OS.
  */
 export function mergeEnvironment(
   target: NodeJS.ProcessEnv,
   fresh: Record<string, string>,
-  caseInsensitive: boolean,
+  windows: boolean,
 ): string[] {
+  const caseInsensitive = windows;
+  const delimiter = windows ? ";" : ":";
   const pathKey = findKey(target, "PATH", caseInsensitive) ?? "PATH";
   const freshPathKey = findKey(fresh, "PATH", caseInsensitive);
-  const currentEntries = splitPath(target[pathKey] ?? "");
-  const freshEntries = freshPathKey ? splitPath(fresh[freshPathKey] ?? "") : [];
+  const currentEntries = splitPath(target[pathKey] ?? "", delimiter);
+  const freshEntries = freshPathKey ? splitPath(fresh[freshPathKey] ?? "", delimiter) : [];
   const norm = (p: string) => (caseInsensitive ? p.toLowerCase() : p).replace(/[\\/]+$/, "");
 
   const seen = new Set<string>();
@@ -58,7 +64,7 @@ export function mergeEnvironment(
   for (const entry of freshEntries) {
     if (!currentSet.has(norm(entry)) && !added.includes(entry)) added.push(entry);
   }
-  target[pathKey] = merged.join(path.delimiter);
+  target[pathKey] = merged.join(delimiter);
 
   for (const [key, value] of Object.entries(fresh)) {
     if (key.toUpperCase() === "PATH") continue;
@@ -67,9 +73,9 @@ export function mergeEnvironment(
   return added;
 }
 
-function splitPath(value: string): string[] {
+function splitPath(value: string, delimiter: string): string[] {
   return value
-    .split(path.delimiter)
+    .split(delimiter)
     .map((s) => s.trim())
     .filter(Boolean);
 }

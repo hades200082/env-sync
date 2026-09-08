@@ -47,7 +47,7 @@ const platform: Platform = {
   packageManagers: [],
   arch: process.arch,
   wsl: false,
-  environment: [],
+  host: [],
   interactive: false,
   root: false,
   sudo: "",

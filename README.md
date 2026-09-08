@@ -144,7 +144,7 @@ linuxmint-22.1, linuxmint-22, linuxmint, ubuntu, debian, apt, snap, linux, unix,
 
 In order of precedence:
 
-1. Environment: `claude-code`, `codex`, `codespaces`, `gitpod`, `ci`, `container`, `wsl`. Only present when you are in one of those. See "Knowing where you are" below.
+1. Host: `claude-code`, `codex`, `codespaces`, `gitpod`, `ci`, `container`, `wsl`. Only present when you are in one of those. See "Knowing where you are" below.
 2. Distro id and version: `ubuntu-24.04`, then `ubuntu-24`. On macOS `macos-15`, on Windows `windows-11` or `windows-10`.
 3. Distro id from `/etc/os-release`: `ubuntu`, `linuxmint`, `debian`, `fedora`, `arch`, `alpine`, and so on.
 4. What the distro says it is like (`ID_LIKE`). Mint lists `ubuntu` and `debian`. Rocky lists `rhel`, `centos` and `fedora`.
@@ -153,7 +153,7 @@ In order of precedence:
 7. `unix` for Linux and macOS together. Handy for `curl | sh` installers.
 8. `default`.
 
-Most of the time the package manager keys are all you need. Reach for a distro key when one distro needs something different, and for an environment key when a sandbox does.
+Most of the time the package manager keys are all you need. Reach for a distro key when one distro needs something different, and for a host key when a sandbox or CI runner does.
 
 ## Installer recipes
 
@@ -200,7 +200,7 @@ Most tools ship one of a few installer shapes. All of these are in [examples/ins
 
 ## Knowing where you are
 
-The script can tell when it is not on a plain desktop, and passes that on in two ways.
+The script can tell when it is not on a plain desktop. The host it finds itself in is passed on in two ways.
 
 As selectors, so a platform map or a tool's `platforms` list can react to it:
 
@@ -220,7 +220,7 @@ As environment variables, which every command can read (`$ENVSYNC_OS` in bash, `
 | `ENVSYNC_OS` | `linux`, `macos`, `windows` |
 | `ENVSYNC_ID`, `ENVSYNC_VERSION` | `linuxmint`, `22.1` |
 | `ENVSYNC_ARCH` | `x64`, `arm64` |
-| `ENVSYNC_ENV` | `claude-code,container` or empty |
+| `ENVSYNC_HOST` | `claude-code,container` or empty |
 | `ENVSYNC_ROOT` | `1` when uid 0 |
 | `ENVSYNC_SUDO` | `sudo` or empty |
 | `ENVSYNC_INTERACTIVE` | `1` when stdin and stdout are a terminal, so an installer may prompt |

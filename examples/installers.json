@@ -74,8 +74,8 @@
       "description": "Runs only inside an agent sandbox, CI or a container",
       "platforms": ["claude-code", "codex", "ci", "container"],
       "install": {
-        "unix": "echo \"running in: $ENVSYNC_ENV as $(id -un)\"",
-        "windows": "Write-Output \"running in: $env:ENVSYNC_ENV\""
+        "unix": "echo \"running in: $ENVSYNC_HOST as $(id -un)\"",
+        "windows": "Write-Output \"running in: $env:ENVSYNC_HOST\""
       }
     }
   ]

@@ -18,7 +18,7 @@ export interface CommandObject {
 }
 
 /**
- * One command value. `null` means "nothing to do on this platform" and is
+ * One command value. `null` means "nothing to do on this machine" and is
  * treated as a deliberate skip rather than a missing definition.
  */
 export type CommandValue = CommandText | CommandObject | null;
@@ -64,7 +64,7 @@ export interface Platform {
    * Where the run is happening, beyond the OS: `claude-code`, `codex`,
    * `codespaces`, `gitpod`, `ci`, `container`, `wsl`. Empty on a plain machine.
    */
-  environment: string[];
+  host: string[];
   /** stdin and stdout are both terminals. */
   interactive: boolean;
   /** Running as uid 0 (never true on Windows). */

@@ -105,7 +105,7 @@ async function runTool(tool: ToolSpec, ctx: Context): Promise<ToolOutcome> {
 async function reportStatus(tool: ToolSpec, check: Resolution, install: Resolution, ctx: Context): Promise<ToolOutcome> {
   const name = tool.name;
   if (check.kind !== "command") {
-    const detail = install.kind === "command" ? "no check command" : "no check or install for this platform";
+    const detail = install.kind === "command" ? "no check command" : "no check or install for this machine";
     log.step(name, c.dim(detail));
     return { name, status: "skipped", detail };
   }
@@ -119,7 +119,7 @@ async function reportStatus(tool: ToolSpec, check: Resolution, install: Resoluti
 }
 
 /**
- * Run the update command if there is one for this platform. `fallback` is the
+ * Run the update command if there is one for this machine. `fallback` is the
  * status to report when nothing runs: "up-to-date" when the check passed,
  * "installed" when install just ran, "unsupported" when nothing at all ran.
  */
@@ -139,7 +139,7 @@ async function maybeUpdate(tool: ToolSpec, update: Resolution, ctx: Context, fal
     return nothingRan ? { name, status: "skipped", detail: `update null for ${update.selector}` } : { name, status: fallback };
   }
   if (update.kind === "no-match") {
-    log.warn(name, `no update command for this platform (have: ${update.available.join(", ")})`);
+    log.warn(name, `no update command for this machine (have: ${update.available.join(", ")})`);
     return { name, status: fallback };
   }
   if (ctx.options.dryRun) {
@@ -170,8 +170,8 @@ async function runInstall(tool: ToolSpec, install: Resolution, ctx: Context): Pr
     return { name, status: "skipped", detail: `install null for ${install.selector}` };
   }
   if (install.kind === "no-match") {
-    log.warn(name, `no install command for this platform (have: ${install.available.join(", ")}; this machine matches: ${ctx.platform.selectors.join(", ")})`);
-    return { name, status: "unsupported", detail: "no install command for this platform" };
+    log.warn(name, `no install command for this machine (have: ${install.available.join(", ")}; this machine matches: ${ctx.platform.selectors.join(", ")})`);
+    return { name, status: "unsupported", detail: "no install command for this machine" };
   }
   if (ctx.options.dryRun) {
     log.step(name, `would run install (${install.command.selector}):`);
