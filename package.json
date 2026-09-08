@@ -1,6 +1,6 @@
 {
   "name": "envsync",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Install and update your CLI tools and agent skills on every machine from one JSON file.",
   "keywords": [
     "cli",
