@@ -1,0 +1,53 @@
+{
+  "name": "envsync",
+  "version": "0.1.0",
+  "description": "Install and update your CLI tools and agent skills on every machine from one JSON file.",
+  "keywords": [
+    "cli",
+    "dotfiles",
+    "provisioning",
+    "install",
+    "tooling",
+    "agent-skills",
+    "claude-code",
+    "cross-platform"
+  ],
+  "license": "MIT",
+  "author": "Lee Conlin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hades200082/env-sync.git"
+  },
+  "homepage": "https://github.com/hades200082/env-sync#readme",
+  "bugs": {
+    "url": "https://github.com/hades200082/env-sync/issues"
+  },
+  "type": "module",
+  "bin": {
+    "envsync": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "schema.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "test": "npm run build && node scripts/run-tests.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,94 @@
+# Two ways to ship a release:
+#
+# 1. Actions tab -> Release -> Run workflow -> pick patch/minor/major.
+#    Bumps package.json, tags, creates a GitHub release, publishes to npm.
+#
+# 2. Create a GitHub release by hand for a tag whose package.json already
+#    carries the same version. Only the publish job runs.
+#
+# Publishing needs ONE of:
+#   - npm trusted publishing (recommended, no secret): on npmjs.com open the
+#     package -> Settings -> Trusted publisher -> GitHub Actions, repository
+#     hades200082/env-sync, workflow release.yml. The first publish has to be
+#     done by hand (`npm publish`) so the package exists to configure.
+#   - an NPM_TOKEN repository secret (automation token from npmjs.com).
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        default: patch
+        options: [patch, minor, major, prerelease]
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  bump:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Bump version and tag
+        id: version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "${{ inputs.bump }}" -m "release: v%s"
+          echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Push commit and tag
+        run: git push --follow-tags
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.version.outputs.tag }}" --generate-notes --title "${{ steps.version.outputs.tag }}"
+
+  publish:
+    # Runs after a dispatch bump, or directly for a hand-made release.
+    if: always() && (github.event_name == 'release' || needs.bump.result == 'success')
+    needs: [bump]
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || needs.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Use an npm that supports trusted publishing
+        run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm test
+      - name: Check the tag matches package.json
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$TAG" ]; then
+            echo "package.json is $version but the tag is $TAG" >&2
+            exit 1
+          fi
+      - name: Use NPM_TOKEN when one is configured
+        if: env.NPM_TOKEN != ''
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+      - name: Publish
+        run: npm publish --provenance --access public

@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/hades200082/env-sync/master/schema.json",
+  "title": "envsync config",
+  "description": "Tools to install and keep updated on every machine. Run with `npx -y envsync@latest`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tools"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "shell": {
+      "description": "Default shell per OS family. Defaults: bash (or sh) on Linux and macOS, pwsh (or Windows PowerShell) on Windows.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "linux": { "$ref": "#/definitions/shellName" },
+        "macos": { "$ref": "#/definitions/shellName" },
+        "windows": { "$ref": "#/definitions/shellName" }
+      }
+    },
+    "tools": {
+      "description": "Tools in the order they run. Put anything a later tool depends on (like gh) first.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/tool" }
+    }
+  },
+  "definitions": {
+    "shellName": {
+      "enum": ["bash", "sh", "zsh", "pwsh", "powershell", "cmd"]
+    },
+    "commandText": {
+      "description": "A string runs as-is. An array is one step per line and stops at the first failing step.",
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      ]
+    },
+    "commandObject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run"],
+      "properties": {
+        "run": { "$ref": "#/definitions/commandText" },
+        "shell": { "$ref": "#/definitions/shellName" }
+      }
+    },
+    "commandValue": {
+      "description": "null means: nothing to do on this platform.",
+      "oneOf": [
+        { "$ref": "#/definitions/commandText" },
+        { "$ref": "#/definitions/commandObject" },
+        { "type": "null" }
+      ]
+    },
+    "platformMap": {
+      "description": "Keys are platform selectors. The first key that matches this machine wins, most specific first: distro id with version (ubuntu-24.04, ubuntu-24), distro id (ubuntu, linuxmint, fedora), ID_LIKE ids (debian), package manager (apt, dnf, yum, pacman, zypper, apk, nix, brew, port, snap, flatpak, winget, choco, scoop), wsl, OS family (linux, macos, windows; also macos-15, windows-11), unix (Linux and macOS), default. Run `npx -y envsync@latest --info` to see a machine's selectors.",
+      "type": "object",
+      "minProperties": 1,
+      "not": { "required": ["run"] },
+      "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+      "additionalProperties": { "$ref": "#/definitions/commandValue" }
+    },
+    "command": {
+      "oneOf": [
+        { "$ref": "#/definitions/commandValue" },
+        { "$ref": "#/definitions/platformMap" }
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "anyOf": [{ "required": ["install"] }, { "required": ["update"] }],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique name. Used in output and for --only / --skip."
+        },
+        "description": {
+          "type": "string"
+        },
+        "check": {
+          "description": "Exit 0 means installed. A bare word with no whitespace (e.g. \"gh\") is looked up on PATH instead of being run. Without a check, install runs and then update runs, every time.",
+          "$ref": "#/definitions/command"
+        },
+        "install": {
+          "description": "Runs when the check fails (or always, when there is no check). The environment is re-read afterwards so new tools are on PATH for later steps.",
+          "$ref": "#/definitions/command"
+        },
+        "update": {
+          "description": "Runs when the check passes (or after install, when there is no check). Skipped with --install-only.",
+          "$ref": "#/definitions/command"
+        },
+        "platforms": {
+          "description": "Only run this tool on machines matching at least one of these selectors.",
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}
