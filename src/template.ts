@@ -36,7 +36,7 @@ export function starterConfig(): string {
         name: "skills",
         description: "Agent skills installed with the skills CLI",
         install:
-          "npx -y skills@latest add mattpocock/skills -a claude-code -g -y && npx -y skills@latest add DistinctionUK/distinction-claude-code-skills -a claude-code -g -y",
+          "npx -y skills@latest add mattpocock/skills -a claude-code -g -y",
         update: "npx -y skills@latest update -g -y",
       },
     ],
