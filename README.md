@@ -1,5 +1,8 @@
 # envsync
 
+[![npm](https://img.shields.io/npm/v/@hades200082%2Fenvsync)](https://www.npmjs.com/package/@hades200082/envsync)
+[![CI](https://github.com/hades200082/env-sync/actions/workflows/ci.yml/badge.svg)](https://github.com/hades200082/env-sync/actions/workflows/ci.yml)
+
 One JSON file that lists the CLI tools and agent skills you want. One command that installs or updates them on whatever machine you are sitting at: Ubuntu, Mint, Fedora, macOS, Windows, WSL, or an agent sandbox.
 
 I wrote it because I work across an Ubuntu server, a Linux Mint desktop and a Windows 11 laptop, plus the odd Claude Code sandbox, and one of them was always missing `gh` or running stale skills.
@@ -9,7 +12,7 @@ I wrote it because I work across an Ubuntu server, a Linux Mint desktop and a Wi
 1. Make a config file. This writes a starter one into the current directory:
 
    ```sh
-   npx -y envsync@latest --init
+   npx -y @hades200082/envsync@latest --init
    ```
 
    Add `--global` to write it to `~/.config/envsync/envsync.json` instead, so it is found from any directory.
@@ -19,7 +22,7 @@ I wrote it because I work across an Ubuntu server, a Linux Mint desktop and a Wi
 3. Run it. Same command on every machine:
 
    ```sh
-   npx -y envsync@latest
+   npx -y @hades200082/envsync@latest
    ```
 
    Tools that are missing get installed. Tools that are present get updated. Anything that fails is reported and the rest carries on.
@@ -27,12 +30,12 @@ I wrote it because I work across an Ubuntu server, a Linux Mint desktop and a Wi
 Useful variations:
 
 ```sh
-npx -y envsync@latest --status          # just tell me what is missing
-npx -y envsync@latest --dry-run         # show what would run
-npx -y envsync@latest --only gh         # one tool
-npx -y envsync@latest -f ./work.json    # a specific file or URL
-npx -y envsync@latest -g you/dotfiles   # envsync.json from a GitHub repo
-npx -y envsync@latest --info            # what does this machine look like to envsync?
+npx -y @hades200082/envsync@latest --status          # just tell me what is missing
+npx -y @hades200082/envsync@latest --dry-run         # show what would run
+npx -y @hades200082/envsync@latest --only gh         # one tool
+npx -y @hades200082/envsync@latest -f ./work.json    # a specific file or URL
+npx -y @hades200082/envsync@latest -g you/dotfiles   # envsync.json from a GitHub repo
+npx -y @hades200082/envsync@latest --info            # what does this machine look like to envsync?
 ```
 
 Requires Node 18 or later. No other dependencies.
@@ -136,7 +139,7 @@ After every install or update, envsync re-reads the environment the way a new te
 
 ### Selectors
 
-This is how one file covers several distros. Each machine gets an ordered list of selectors, most specific first, and a platform map uses the first key it has that appears in that list. `npx -y envsync@latest --info` prints the list for the machine you are on. A Linux Mint 22.1 desktop with apt and snap looks like this:
+This is how one file covers several distros. Each machine gets an ordered list of selectors, most specific first, and a platform map uses the first key it has that appears in that list. `npx -y @hades200082/envsync@latest --info` prints the list for the machine you are on. A Linux Mint 22.1 desktop with apt and snap looks like this:
 
 ```
 linuxmint-22.1, linuxmint-22, linuxmint, ubuntu, debian, apt, snap, linux, unix, default
@@ -234,7 +237,7 @@ A tool that should only run inside a sandbox:
 { "name": "sandbox-setup", "platforms": ["claude-code", "codex"], "install": "..." }
 ```
 
-For Claude Code on the web or Codex, the simplest arrangement is a setup script that runs `npx -y envsync@latest -g you/dotfiles`. Those containers are Ubuntu or Debian as root, so the `apt` selector matches and `$ENVSYNC_SUDO` is empty.
+For Claude Code on the web or Codex, the simplest arrangement is a setup script that runs `npx -y @hades200082/envsync@latest -g you/dotfiles`. Those containers are Ubuntu or Debian as root, so the `apt` selector matches and `$ENVSYNC_SUDO` is empty.
 
 ## Shells
 
@@ -271,7 +274,7 @@ Exit code is 0 when everything ran, 1 when an install or update failed (or, with
 
 ## Keeping envsync itself current
 
-Always run it as `npx -y envsync@latest`. Without `@latest`, npx will reuse a cached older version. Each run also asks the npm registry whether a newer version exists and prints a one-line note at the end if so. Set `ENVSYNC_NO_UPDATE_CHECK=1` or pass `--no-update-check` to turn that off.
+Always run it as `npx -y @hades200082/envsync@latest`. Without `@latest`, npx will reuse a cached older version. Each run also asks the npm registry whether a newer version exists and prints a one-line note at the end if so. Set `ENVSYNC_NO_UPDATE_CHECK=1` or pass `--no-update-check` to turn that off.
 
 ## Releasing a new version
 

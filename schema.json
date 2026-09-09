@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/hades200082/env-sync/master/schema.json",
   "title": "envsync config",
-  "description": "Tools to install and keep updated on every machine. Run with `npx -y envsync@latest`.",
+  "description": "Tools to install and keep updated on every machine. Run with `npx -y @hades200082/envsync@latest`.",
   "type": "object",
   "additionalProperties": false,
   "required": ["tools"],
@@ -55,7 +55,7 @@
       ]
     },
     "platformMap": {
-      "description": "Keys are platform selectors. The first key that matches this machine wins, most specific first: host (claude-code, codex, codespaces, gitpod, ci, container, wsl), distro id with version (ubuntu-24.04, ubuntu-24), distro id (ubuntu, linuxmint, fedora), ID_LIKE ids (debian), package manager (apt, dnf, yum, pacman, zypper, apk, nix, brew, port, snap, flatpak, winget, choco, scoop), OS family (linux, macos, windows; also macos-15, windows-11), unix (Linux and macOS), default. Run `npx -y envsync@latest --info` to see a machine's selectors.",
+      "description": "Keys are platform selectors. The first key that matches this machine wins, most specific first: host (claude-code, codex, codespaces, gitpod, ci, container, wsl), distro id with version (ubuntu-24.04, ubuntu-24), distro id (ubuntu, linuxmint, fedora), ID_LIKE ids (debian), package manager (apt, dnf, yum, pacman, zypper, apk, nix, brew, port, snap, flatpak, winget, choco, scoop), OS family (linux, macos, windows; also macos-15, windows-11), unix (Linux and macOS), default. Run `npx -y @hades200082/envsync@latest --info` to see a machine's selectors.",
       "type": "object",
       "minProperties": 1,
       "not": { "required": ["run"] },

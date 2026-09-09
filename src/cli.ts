@@ -20,7 +20,7 @@ const HELP = `envsync ${pkg.version}
 Install and update your CLI tools and agent skills from one JSON file.
 
 Usage
-  npx -y envsync@latest [options]
+  npx -y @hades200082/envsync@latest [options]
 
 Config lookup (first hit wins)
   1. --file <path or URL>            any local path or http(s) URL
@@ -149,7 +149,7 @@ async function main(argv: string[]): Promise<number> {
   const newer = await updatePromise;
   if (newer) {
     log.info("");
-    log.info(c.yellow(`A newer envsync is available (${newer}, you have ${pkg.version}). Run: npx -y envsync@latest`));
+    log.info(c.yellow(`A newer envsync is available (${newer}, you have ${pkg.version}). Run: npx -y @hades200082/envsync@latest`));
   }
 
   if (runnerOptions.statusOnly) return outcomes.some((o) => o.status === "missing") ? 1 : 0;
@@ -165,7 +165,7 @@ function writeStarter(global: boolean): number {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, starterConfig(), "utf8");
   log.info(`Wrote ${target}`);
-  log.info(c.dim("Edit it, then run: npx -y envsync@latest"));
+  log.info(c.dim("Edit it, then run: npx -y @hades200082/envsync@latest"));
   return 0;
 }
 
