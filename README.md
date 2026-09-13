@@ -27,6 +27,8 @@ I wrote it because I work across an Ubuntu server, a Linux Mint desktop and a Wi
 
    Tools that are missing get installed. Tools that are present get updated. Anything that fails is reported and the rest carries on.
 
+   Install and update commands are bounded to two minutes. A command that does not exit is reported as timed out so later tools can still run.
+
 Useful variations:
 
 ```sh

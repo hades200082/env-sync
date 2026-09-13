@@ -13,7 +13,11 @@ export interface RunnerOptions {
   statusOnly: boolean;
   only: string[];
   skip: string[];
+  /** Maximum time an install or update command may run. */
+  commandTimeoutMs?: number;
 }
+
+export const DEFAULT_COMMAND_TIMEOUT_MS = 120_000;
 
 export type OutcomeStatus =
   | "installed"
@@ -150,9 +154,10 @@ async function maybeUpdate(tool: ToolSpec, update: Resolution, ctx: Context, fal
   log.step(name, `updating (${update.command.selector})`);
   log.command(update.command.run);
   const result = await execute(update.command, ctx);
-  if (result !== 0) {
-    log.error(name, `update failed with exit code ${result}`);
-    return { name, status: "failed", detail: `update exit ${result}` };
+  if (result.code !== 0) {
+    const detail = result.timedOut ? "update timed out" : `update exit ${result.code}`;
+    log.error(name, detail);
+    return { name, status: "failed", detail };
   }
   await refreshEnvironment(ctx.platform);
   log.ok(name, "updated");
@@ -180,10 +185,11 @@ async function runInstall(tool: ToolSpec, install: Resolution, ctx: Context): Pr
   }
   log.step(name, `installing (${install.command.selector})`);
   log.command(install.command.run);
-  const code = await execute(install.command, ctx);
-  if (code !== 0) {
-    log.error(name, `install failed with exit code ${code}`);
-    return { name, status: "failed", detail: `install exit ${code}` };
+  const result = await execute(install.command, ctx);
+  if (result.code !== 0) {
+    const detail = result.timedOut ? "install timed out" : `install exit ${result.code}`;
+    log.error(name, detail);
+    return { name, status: "failed", detail };
   }
   await refreshEnvironment(ctx.platform);
   return { name, status: "installed" };
@@ -214,17 +220,18 @@ async function runCheck(name: string, command: ResolvedCommand, ctx: Context): P
   }
 }
 
-async function execute(command: ResolvedCommand, ctx: Context): Promise<number> {
+async function execute(command: ResolvedCommand, ctx: Context): Promise<{ code: number; timedOut: boolean }> {
   try {
     const shell = pickShell(command, ctx);
     const result = await runShell(shell, command.run, ctx.platform, {
       failFast: command.failFast,
       env: { ...process.env, ENVSYNC_SHELL: shell },
+      timeoutMs: ctx.options.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
     });
-    return result.code;
+    return result;
   } catch (err) {
     log.error(null, `could not start shell: ${(err as Error).message}`);
-    return 127;
+    return { code: 127, timedOut: false };
   }
 }
 

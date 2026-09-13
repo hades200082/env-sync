@@ -16,6 +16,7 @@ export interface RunResult {
   code: number;
   stdout: string;
   stderr: string;
+  timedOut: boolean;
 }
 
 export interface ShellInvocation {
@@ -118,8 +119,12 @@ export function runShell(
     child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
     child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
     let timer: NodeJS.Timeout | undefined;
+    let timedOut = false;
     if (options.timeoutMs) {
-      timer = setTimeout(() => child.kill(), options.timeoutMs);
+      timer = setTimeout(() => {
+        timedOut = true;
+        child.kill();
+      }, options.timeoutMs);
     }
     child.on("error", (err) => {
       if (timer) clearTimeout(timer);
@@ -127,7 +132,7 @@ export function runShell(
     });
     child.on("close", (code, signal) => {
       if (timer) clearTimeout(timer);
-      resolve({ code: code ?? (signal ? 1 : 0), stdout, stderr });
+      resolve({ code: code ?? (signal ? 1 : 0), stdout, stderr, timedOut });
     });
   });
 }

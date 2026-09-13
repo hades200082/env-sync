@@ -59,6 +59,7 @@ test("exit codes come back from the real default shell", async () => {
   const shell = defaultShell(platform.os);
   const ok = await runShell(shell, "exit 0", platform, { capture: true, timeoutMs: 30000 });
   assert.equal(ok.code, 0);
+  assert.equal(ok.timedOut, false);
   const bad = await runShell(shell, "exit 3", platform, { capture: true, timeoutMs: 30000 });
   assert.equal(bad.code, 3);
 });
