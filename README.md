@@ -125,7 +125,9 @@ After every install or update, envsync re-reads the environment the way a new te
 ```
 
 For a non-interactive command that may manage its own terminal or process
-group, set `isolate` to `true`. For example:
+group, set `isolate` to `true`. Isolated commands get EOF on stdin and run in
+their own process group, so terminal job-control signals cannot stop envsync.
+For example:
 
 ```json
 "update": { "run": "opencode upgrade", "isolate": true }

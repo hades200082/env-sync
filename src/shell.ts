@@ -113,7 +113,16 @@ export function runShell(
     const child = spawn(file, args, {
       cwd: options.cwd ?? process.cwd(),
       env: options.env ?? process.env,
-      stdio: options.capture ? ["ignore", "pipe", "pipe"] : "inherit",
+      // A detached process group is not the terminal's foreground group. If
+      // it inherits a TTY for stdin, any read can trigger SIGTTIN and leave
+      // the runner waiting for a stopped child. Isolated commands are used
+      // for non-interactive installers/updaters, so give them EOF on stdin
+      // while keeping their output visible.
+      stdio: options.capture
+        ? ["ignore", "pipe", "pipe"]
+        : options.isolateProcessGroup
+          ? ["ignore", "inherit", "inherit"]
+          : "inherit",
       detached: options.isolateProcessGroup === true,
       windowsHide: true,
     });
