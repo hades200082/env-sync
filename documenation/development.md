@@ -34,6 +34,8 @@ The docs source and Pages site live in [`documenation/`](https://github.com/hade
 
 The search index is generated from the pages by `documenation/search.json`. The browser searches that index locally, so the published site does not need an API.
 
+The site publishes `llms.txt` at the site root. Update its links and descriptions when you add, remove, or rename a documentation page.
+
 ## Publish the site
 
 The `Deploy documentation` workflow runs when changes under `documenation/` reach `master`. It builds the Jekyll site and deploys the result to GitHub Pages.

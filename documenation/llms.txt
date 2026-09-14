@@ -1,0 +1,22 @@
+# envsync
+
+> envsync provisions one machine from one JSON config. It checks each tool, installs missing tools, updates present tools, and reports an outcome for every tool.
+
+envsync is a Node.js CLI. It accepts config sources from the current directory, a user config directory, a URL, or a GitHub repository. Commands can vary by selector, such as an OS, distro, package manager, or host.
+
+## Documentation
+
+- [Quick start](https://hades200082.github.io/env-sync/quick-start/): Create a config, add tools, and run envsync on a machine.
+- [Configuration](https://hades200082.github.io/env-sync/configuration/): Learn the config fields, tool fields, and run order.
+- [Commands](https://hades200082.github.io/env-sync/commands/): Learn command values, shells, platform maps, checks, environment refresh, and time limits.
+- [Selectors](https://hades200082.github.io/env-sync/selectors/): Learn selector order, platform maps, platform filters, and host selectors.
+- [Config sources](https://hades200082.github.io/env-sync/config-sources/): Learn lookup order and local, URL, and GitHub config sources.
+- [Troubleshooting](https://hades200082.github.io/env-sync/troubleshooting/): Diagnose missing configs, unverified checks, unsupported commands, and failed commands.
+- [Development](https://hades200082.github.io/env-sync/development/): Run tests and update the documentation site.
+
+## Reference
+
+- [JSON schema](https://raw.githubusercontent.com/hades200082/env-sync/master/schema.json): Complete config validation schema.
+- [Starter config](https://github.com/hades200082/env-sync/blob/master/examples/envsync.json): Example config for common tools.
+- [Installer examples](https://github.com/hades200082/env-sync/blob/master/examples/installers.json): Common command forms and installer patterns.
+- [Source repository](https://github.com/hades200082/env-sync): Source code, tests, issues, and release information.
