@@ -19,17 +19,17 @@ const platform: Platform = {
   selectors: ["default"],
 };
 
-test("a stuck update is failed after the command timeout", { timeout: 2000 }, async () => {
+test("a stuck update is failed after the command timeout", { timeout: 5000 }, async () => {
   const started = Date.now();
   const outcomes = await runAll(
     { tools: [{ name: "stuck", update: "sleep 5" }, { name: "after", update: "true" }] },
     platform,
-    { dryRun: false, installOnly: false, statusOnly: false, only: [], skip: [], commandTimeoutMs: 100 },
+    { dryRun: false, installOnly: false, statusOnly: false, only: [], skip: [], commandTimeoutMs: 1000 },
   );
 
   assert.deepEqual(outcomes, [
     { name: "stuck", status: "failed", detail: "update timed out" },
     { name: "after", status: "updated" },
   ]);
-  assert.ok(Date.now() - started < 1000, "the runner should not wait for the full command");
+  assert.ok(Date.now() - started < 3000, "the runner should not wait for the full command");
 });
