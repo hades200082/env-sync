@@ -46,7 +46,7 @@
         "shell": { "$ref": "#/definitions/shellName" },
         "isolate": {
           "type": "boolean",
-          "description": "Run this non-interactive command in its own process group/session with EOF on stdin, so terminal job-control signals do not stop the envsync run."
+          "description": "Run this non-interactive command in its own process group/session with EOF on stdin and non-terminal output streams, so terminal job-control signals do not stop the envsync run."
         }
       }
     },

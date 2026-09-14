@@ -150,16 +150,37 @@ export function runShell(
         }
       }, options.timeoutMs);
     }
-    child.on("error", (err) => {
+    let settled = false;
+    const clearTimers = () => {
       if (timer) clearTimeout(timer);
       if (forceTimer) clearTimeout(forceTimer);
+    };
+    const finish = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimers();
+      resolve({ code: code ?? (signal ? 1 : 0), stdout, stderr, timedOut });
+    };
+    child.on("error", (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimers();
       reject(err);
     });
-    child.on("close", (code, signal) => {
-      if (timer) clearTimeout(timer);
-      if (forceTimer) clearTimeout(forceTimer);
-      resolve({ code: code ?? (signal ? 1 : 0), stdout, stderr, timedOut });
-    });
+    if (options.capture) {
+      child.on("close", finish);
+    } else {
+      child.on("exit", (code, signal) => {
+        // A descendant can inherit the output pipes and keep them open after
+        // the command shell exits. Streaming commands are complete at that
+        // point; destroy those pipes on the next turn so close cannot hang.
+        setImmediate(() => {
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          finish(code, signal);
+        });
+      });
+    }
   });
 }
 
@@ -173,6 +194,6 @@ function terminate(child: ReturnType<typeof spawn>, isolated: boolean, signal: N
       // Fall back to the direct child if the process group disappeared first.
     }
   }
-  if (signal === "SIGTERM") child.kill("SIGCONT");
+  if (signal === "SIGTERM" && process.platform !== "win32") child.kill("SIGCONT");
   child.kill(signal);
 }

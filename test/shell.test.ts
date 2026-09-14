@@ -85,20 +85,23 @@ test("steps stop at the first failure in the real default shell", async () => {
 test("an isolated command cannot stop the parent process group", { timeout: 2000 }, async () => {
   if (platform.os === "windows") return;
 
+  const resumeScript = "setTimeout(() => process.kill(-Number(process.argv[1]), 'SIGCONT'), 300)";
+  const helper = [
+    'const { spawn } = require("node:child_process");',
+    `const child = spawn(process.execPath, ["-e", ${JSON.stringify(resumeScript)}, process.argv[1]], { detached: true, stdio: "ignore" });`,
+    "child.unref();",
+  ].join(" ");
+  const command = [
+    "pgid=$(ps -o pgid= -p $$ | tr -d ' ')",
+    `${quote(process.execPath)} -e ${quote(helper)} "$pgid"`,
+    "kill -STOP 0",
+    "printf resumed",
+  ].join("\n");
   const started = Date.now();
   let parentTickAt = 0;
   const parentTimer = setTimeout(() => {
     parentTickAt = Date.now();
   }, 30);
-  const command = [
-    'marker="/tmp/envsync-isolate-$PPID-$$"',
-    'trap \'rm -f "$marker"\' EXIT',
-    "pgid=$(ps -o pgid= -p $$ | tr -d ' ')",
-    'setsid bash -c "printf ready > $marker; sleep 0.3; kill -CONT -- -$pgid" >/dev/null 2>&1 &',
-    "while [ ! -f \"$marker\" ]; do sleep 0.01; done",
-    "kill -STOP 0",
-    "printf resumed",
-  ].join("\n");
   const result = await runShell("bash", command, platform, {
     capture: true,
     timeoutMs: 1000,
@@ -186,6 +189,17 @@ test("an isolated command does not inherit terminal stdio", { timeout: 3000 }, a
   assert.equal(result.status, 0, `${stdout}\n${stderr}`);
   assert.match(stdout, /noninteractive/);
   assert.match(stdout, /"code":0/);
+});
+
+test("an isolated command does not wait for a descendant holding its output pipe", { timeout: 2000 }, async () => {
+  if (platform.os === "windows") return;
+
+  const result = await runShell("bash", "sleep 2 & printf done", platform, {
+    isolateProcessGroup: true,
+    timeoutMs: 700,
+  });
+
+  assert.equal(result.timedOut, false);
 });
 
 test("an isolated stopped command is terminated by the timeout", { timeout: 2000 }, async () => {
