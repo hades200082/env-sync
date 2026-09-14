@@ -69,6 +69,13 @@ test("command objects accept run, shell and isolate", () => {
   assert.deepEqual(problems({ tools: [{ name: "x", install: { run: "a", isolate: "yes" } }] }), ["tools[0].install.isolate: must be a boolean"]);
 });
 
+test("the JSON schema declares isolate as a boolean", () => {
+  const schema = JSON.parse(fs.readFileSync(path.join(repoRoot, "schema.json"), "utf8")) as {
+    definitions?: { commandObject?: { properties?: { isolate?: { type?: string } } } };
+  };
+  assert.equal(schema.definitions?.commandObject?.properties?.isolate?.type, "boolean");
+});
+
 test("platforms must be strings", () => {
   const p = problems({ tools: [{ name: "x", install: "a", platforms: ["macos", 3] }] });
   assert.deepEqual(p, ["tools[0].platforms: must be an array of selector strings"]);
