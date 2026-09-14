@@ -76,3 +76,47 @@ test("steps stop at the first failure in the real default shell", async () => {
   assert.equal(r.code, 2);
   assert.ok(!r.stdout.includes("SHOULD_NOT_PRINT"));
 });
+
+test("an isolated command cannot stop the parent process group", { timeout: 2000 }, async () => {
+  if (platform.os === "windows") return;
+
+  const started = Date.now();
+  let parentTickAt = 0;
+  const parentTimer = setTimeout(() => {
+    parentTickAt = Date.now();
+  }, 30);
+  const command = [
+    'marker="/tmp/envsync-isolate-$PPID-$$"',
+    'trap \'rm -f "$marker"\' EXIT',
+    "pgid=$(ps -o pgid= -p $$ | tr -d ' ')",
+    'setsid bash -c "printf ready > $marker; sleep 0.3; kill -CONT -- -$pgid" >/dev/null 2>&1 &',
+    "while [ ! -f \"$marker\" ]; do sleep 0.01; done",
+    "kill -STOP 0",
+    "printf resumed",
+  ].join("\n");
+  const result = await runShell("bash", command, platform, {
+    capture: true,
+    timeoutMs: 1000,
+    isolateProcessGroup: true,
+  });
+  clearTimeout(parentTimer);
+
+  assert.ok(parentTickAt !== 0 && parentTickAt - started < 200, "the parent event loop must keep running while the child is stopped");
+  assert.equal(result.code, 0);
+  assert.equal(result.timedOut, false);
+  assert.equal(result.stdout, "resumed");
+});
+
+test("an isolated stopped command is terminated by the timeout", { timeout: 2000 }, async () => {
+  if (platform.os === "windows") return;
+
+  const started = Date.now();
+  const result = await runShell("bash", "kill -STOP 0", platform, {
+    capture: true,
+    timeoutMs: 50,
+    isolateProcessGroup: true,
+  });
+
+  assert.equal(result.timedOut, true);
+  assert.ok(Date.now() - started < 1000, "a stopped child must not defeat the timeout");
+});

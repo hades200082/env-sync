@@ -111,8 +111,11 @@ function checkCommandObject(value: Record<string, unknown>, where: string, probl
   if (value.shell !== undefined && (typeof value.shell !== "string" || !(SHELL_NAMES as readonly string[]).includes(value.shell))) {
     problems.push(`${where}.shell: expected one of ${SHELL_NAMES.join(", ")}`);
   }
+  if (value.isolate !== undefined && typeof value.isolate !== "boolean") {
+    problems.push(`${where}.isolate: must be a boolean`);
+  }
   for (const key of Object.keys(value)) {
-    if (key !== "run" && key !== "shell") problems.push(`${where}: unknown key "${key}"`);
+    if (key !== "run" && key !== "shell" && key !== "isolate") problems.push(`${where}: unknown key "${key}"`);
   }
 }
 

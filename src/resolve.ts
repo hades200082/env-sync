@@ -1,6 +1,6 @@
 import type { Command, CommandText, CommandValue, ResolvedCommand, ShellName } from "./types.js";
 
-export function isCommandObject(value: unknown): value is { run: CommandText; shell?: ShellName } {
+export function isCommandObject(value: unknown): value is { run: CommandText; shell?: ShellName; isolate?: boolean } {
   return typeof value === "object" && value !== null && "run" in value;
 }
 
@@ -34,7 +34,15 @@ function fromValue(value: CommandValue, selector: string): Resolution {
   if (typeof value === "string" || Array.isArray(value)) {
     return { kind: "command", command: { ...toText(value), shell: undefined, selector } };
   }
-  return { kind: "command", command: { ...toText(value.run), shell: value.shell, selector } };
+  return {
+    kind: "command",
+    command: {
+      ...toText(value.run),
+      shell: value.shell,
+      ...(value.isolate === true ? { isolate: true } : {}),
+      selector,
+    },
+  };
 }
 
 function toText(value: CommandText): { run: string; failFast: boolean } {

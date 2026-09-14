@@ -37,9 +37,9 @@ test("no matching key reports what was available", () => {
   assert.deepEqual(resolveCommand({ macos: "brew", apt: "apt" }, WINDOWS), { kind: "no-match", available: ["macos", "apt"] });
 });
 
-test("a { run, shell } object carries its shell", () => {
-  const r = resolveCommand({ windows: { run: "dir", shell: "cmd" } }, WINDOWS);
-  assert.deepEqual(r, { kind: "command", command: { run: "dir", failFast: false, shell: "cmd", selector: "windows" } });
+test("a command object carries its shell and isolation setting", () => {
+  const r = resolveCommand({ windows: { run: "dir", shell: "cmd", isolate: true } }, WINDOWS);
+  assert.deepEqual(r, { kind: "command", command: { run: "dir", failFast: false, shell: "cmd", isolate: true, selector: "windows" } });
 });
 
 test("an array of steps is joined with newlines and marked fail-fast", () => {

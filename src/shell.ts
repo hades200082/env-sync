@@ -7,6 +7,8 @@ export interface RunOptions {
   capture?: boolean;
   /** Stop at the first failing line (array-of-steps form). */
   failFast?: boolean;
+  /** Put the command in its own process group/session. */
+  isolateProcessGroup?: boolean;
   env?: NodeJS.ProcessEnv;
   cwd?: string;
   timeoutMs?: number;
@@ -112,6 +114,7 @@ export function runShell(
       cwd: options.cwd ?? process.cwd(),
       env: options.env ?? process.env,
       stdio: options.capture ? ["ignore", "pipe", "pipe"] : "inherit",
+      detached: options.isolateProcessGroup === true,
       windowsHide: true,
     });
     let stdout = "";
@@ -119,20 +122,41 @@ export function runShell(
     child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
     child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
     let timer: NodeJS.Timeout | undefined;
+    let forceTimer: NodeJS.Timeout | undefined;
     let timedOut = false;
     if (options.timeoutMs) {
       timer = setTimeout(() => {
         timedOut = true;
-        child.kill();
+        const isolated = options.isolateProcessGroup === true;
+        terminate(child, isolated, "SIGTERM");
+        if (isolated) {
+          forceTimer = setTimeout(() => terminate(child, true, "SIGKILL"), 1000);
+        }
       }, options.timeoutMs);
     }
     child.on("error", (err) => {
       if (timer) clearTimeout(timer);
+      if (forceTimer) clearTimeout(forceTimer);
       reject(err);
     });
     child.on("close", (code, signal) => {
       if (timer) clearTimeout(timer);
+      if (forceTimer) clearTimeout(forceTimer);
       resolve({ code: code ?? (signal ? 1 : 0), stdout, stderr, timedOut });
     });
   });
+}
+
+function terminate(child: ReturnType<typeof spawn>, isolated: boolean, signal: NodeJS.Signals): void {
+  if (isolated && process.platform !== "win32" && child.pid !== undefined) {
+    try {
+      process.kill(-child.pid, "SIGCONT");
+      process.kill(-child.pid, signal);
+      return;
+    } catch {
+      // Fall back to the direct child if the process group disappeared first.
+    }
+  }
+  if (signal === "SIGTERM") child.kill("SIGCONT");
+  child.kill(signal);
 }

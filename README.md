@@ -118,10 +118,17 @@ After every install or update, envsync re-reads the environment the way a new te
 "install": ["curl -fsSL https://example.com/install.sh -o /tmp/i.sh", "sh /tmp/i.sh"]
 ```
 
-**An object with `run` and `shell`,** when one command needs a specific shell.
+**An object with `run`, `shell` and optional `isolate`,** when one command needs a specific shell or should not share job-control signals with envsync.
 
 ```json
 "install": { "run": "irm get.scoop.sh | iex", "shell": "pwsh" }
+```
+
+For a non-interactive command that may manage its own terminal or process
+group, set `isolate` to `true`. For example:
+
+```json
+"update": { "run": "opencode upgrade", "isolate": true }
 ```
 
 **`null`,** to say "nothing to do here" for one platform without it being reported as unsupported.

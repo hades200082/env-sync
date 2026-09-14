@@ -43,7 +43,11 @@
       "required": ["run"],
       "properties": {
         "run": { "$ref": "#/definitions/commandText" },
-        "shell": { "$ref": "#/definitions/shellName" }
+        "shell": { "$ref": "#/definitions/shellName" },
+        "isolate": {
+          "type": "boolean",
+          "description": "Run this command in its own process group/session so job-control signals do not stop the envsync run."
+        }
       }
     },
     "commandValue": {

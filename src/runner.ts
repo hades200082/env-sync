@@ -209,6 +209,7 @@ async function runCheck(name: string, command: ResolvedCommand, ctx: Context): P
     const result = await runShell(shell, run, ctx.platform, {
       capture: true,
       failFast: command.failFast,
+      isolateProcessGroup: command.isolate === true,
       timeoutMs: 120_000,
       env: { ...process.env, ENVSYNC_SHELL: shell },
     });
@@ -225,6 +226,7 @@ async function execute(command: ResolvedCommand, ctx: Context): Promise<{ code: 
     const shell = pickShell(command, ctx);
     const result = await runShell(shell, command.run, ctx.platform, {
       failFast: command.failFast,
+      isolateProcessGroup: command.isolate === true,
       env: { ...process.env, ENVSYNC_SHELL: shell },
       timeoutMs: ctx.options.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS,
     });

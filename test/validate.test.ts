@@ -62,10 +62,11 @@ test("tools must be an array", () => {
   assert.deepEqual(problems({ tools: {} }), ["tools must be an array"]);
 });
 
-test("command objects accept run and shell only", () => {
+test("command objects accept run, shell and isolate", () => {
   const p = problems({ tools: [{ name: "x", install: { run: "a", shell: "cmd", extra: 1 } }] });
   assert.deepEqual(p, ['tools[0].install: unknown key "extra"']);
-  assert.deepEqual(problems({ tools: [{ name: "x", install: { run: ["a", "b"], shell: "pwsh" } }] }), []);
+  assert.deepEqual(problems({ tools: [{ name: "x", install: { run: ["a", "b"], shell: "pwsh", isolate: true } }] }), []);
+  assert.deepEqual(problems({ tools: [{ name: "x", install: { run: "a", isolate: "yes" } }] }), ["tools[0].install.isolate: must be a boolean"]);
 });
 
 test("platforms must be strings", () => {

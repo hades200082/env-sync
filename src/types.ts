@@ -11,10 +11,12 @@ export type OsFamily = "linux" | "macos" | "windows";
  */
 export type CommandText = string | string[];
 
-/** A command with an optional shell override. */
+/** A command with optional shell and process-group overrides. */
 export interface CommandObject {
   run: CommandText;
   shell?: ShellName;
+  /** Run in its own process group/session, keeping job-control signals local. */
+  isolate?: boolean;
 }
 
 /**
@@ -82,6 +84,8 @@ export interface ResolvedCommand {
   /** True when the config gave an array of steps. */
   failFast: boolean;
   shell: ShellName | undefined;
+  /** True when the command should run in its own process group/session. */
+  isolate?: boolean;
   /** Which selector matched, or `direct` when the command was a plain value. */
   selector: string;
 }
