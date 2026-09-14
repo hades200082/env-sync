@@ -113,23 +113,30 @@ export function runShell(
     const child = spawn(file, args, {
       cwd: options.cwd ?? process.cwd(),
       env: options.env ?? process.env,
-      // A detached process group is not the terminal's foreground group. If
-      // it inherits a TTY for stdin, any read can trigger SIGTTIN and leave
-      // the runner waiting for a stopped child. Isolated commands are used
-      // for non-interactive installers/updaters, so give them EOF on stdin
-      // while keeping their output visible.
-      stdio: options.capture
+      // An isolated process group is not the terminal's foreground group. If
+      // it inherits a TTY, reads can trigger SIGTTIN and terminal operations
+      // can trigger SIGTTOU, leaving the runner waiting for a stopped child.
+      // Isolated commands are non-interactive installers/updaters, so give
+      // them EOF on stdin and forward piped output instead of giving them the
+      // terminal handles directly.
+      stdio: options.capture || options.isolateProcessGroup
         ? ["ignore", "pipe", "pipe"]
-        : options.isolateProcessGroup
-          ? ["ignore", "inherit", "inherit"]
-          : "inherit",
+        : "inherit",
       detached: options.isolateProcessGroup === true,
       windowsHide: true,
     });
     let stdout = "";
     let stderr = "";
-    child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
-    child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+    child.stdout?.on("data", (d: Buffer) => {
+      const text = d.toString();
+      if (options.capture) stdout += text;
+      else process.stdout.write(text);
+    });
+    child.stderr?.on("data", (d: Buffer) => {
+      const text = d.toString();
+      if (options.capture) stderr += text;
+      else process.stderr.write(text);
+    });
     let timer: NodeJS.Timeout | undefined;
     let forceTimer: NodeJS.Timeout | undefined;
     let timedOut = false;

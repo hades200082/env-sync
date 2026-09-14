@@ -150,6 +150,44 @@ test("an isolated command cannot read the terminal and get stopped", { timeout: 
   assert.match(stdout, /"timedOut":false/);
 });
 
+test("an isolated command does not inherit terminal stdio", { timeout: 3000 }, async () => {
+  if (process.platform !== "linux") return;
+  const scriptCheck = spawnSync("script", ["--version"], { stdio: "ignore" });
+  if (scriptCheck.error) return;
+
+  const helper = [
+    `import { runShell } from ${JSON.stringify(pathToFileURL(path.resolve(here, "../src/shell.js")).href)};`,
+    'const result = await runShell("bash", "if [ -t 0 ] || [ -t 1 ] || [ -t 2 ]; then exit 7; fi; printf noninteractive", { os: "linux" }, { isolateProcessGroup: true, timeoutMs: 300 });',
+    "console.log(JSON.stringify(result));",
+    "process.exitCode = result.code === 0 ? 0 : 1;",
+  ].join("\n");
+  const command = `${quote(process.execPath)} --input-type=module -e ${quote(helper)}`;
+  const probe = spawn("script", ["-qefc", command, "/dev/null"], { stdio: ["pipe", "pipe", "pipe"] });
+  let stdout = "";
+  let stderr = "";
+  probe.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()));
+  probe.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()));
+  const result = await new Promise<{ status: number | null; error?: Error }>((resolve) => {
+    const timer = setTimeout(() => {
+      probe.kill("SIGKILL");
+      resolve({ status: null, error: new Error("PTY probe timed out") });
+    }, 2000);
+    probe.once("error", (error) => {
+      clearTimeout(timer);
+      resolve({ status: null, error });
+    });
+    probe.once("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status });
+    });
+  });
+
+  assert.equal(result.error, undefined, `${stdout}\n${stderr}`);
+  assert.equal(result.status, 0, `${stdout}\n${stderr}`);
+  assert.match(stdout, /noninteractive/);
+  assert.match(stdout, /"code":0/);
+});
+
 test("an isolated stopped command is terminated by the timeout", { timeout: 2000 }, async () => {
   if (platform.os === "windows") return;
 
