@@ -172,7 +172,12 @@ function capture(
   return new Promise((resolve) => {
     let child: ReturnType<typeof spawn>;
     try {
-      child = spawn(file, args, { stdio: ["ignore", "pipe", "pipe"], env, windowsHide: true });
+      child = spawn(file, args, {
+        stdio: ["ignore", "pipe", "pipe"],
+        env,
+        detached: process.platform !== "win32",
+        windowsHide: true,
+      });
     } catch {
       resolve(undefined);
       return;
@@ -180,14 +185,34 @@ function capture(
     let stdout = "";
     child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
     child.stderr?.on("data", () => undefined);
-    const timer = setTimeout(() => child.kill(), timeoutMs);
-    child.on("error", () => {
+    let settled = false;
+    const finish = (value: string | undefined) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(timer);
-      resolve(undefined);
-    });
-    child.on("close", () => {
-      clearTimeout(timer);
-      resolve(stdout);
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      resolve(value);
+    };
+    const timer = setTimeout(() => {
+      if (process.platform !== "win32" && child.pid !== undefined) {
+        try {
+          process.kill(-child.pid, "SIGCONT");
+          process.kill(-child.pid, "SIGTERM");
+        } catch {
+          // Fall back to the direct child if its process group disappeared.
+          child.kill("SIGTERM");
+        }
+      } else {
+        child.kill("SIGTERM");
+      }
+      finish(undefined);
+    }, timeoutMs);
+    child.on("error", () => finish(undefined));
+    child.on("exit", () => {
+      // A descendant can keep the pipes open after the shell exits. The
+      // environment payload is complete at that point, so do not wait for it.
+      setImmediate(() => finish(stdout));
     });
   });
 }
