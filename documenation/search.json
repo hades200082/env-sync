@@ -1,0 +1,19 @@
+---
+layout: null
+search_exclude: true
+---
+[
+{% assign first = true %}
+{% for page in site.pages %}
+  {% unless page.search_exclude %}
+    {% unless first %},{% endunless %}
+    {
+      "title": {{ page.title | jsonify }},
+      "url": {{ page.url | relative_url | jsonify }},
+      "description": {{ page.description | default: "" | jsonify }},
+      "content": {{ page.content | strip_html | strip_newlines | jsonify }}
+    }
+    {% assign first = false %}
+  {% endunless %}
+{% endfor %}
+]

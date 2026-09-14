@@ -1,0 +1,29 @@
+title: envsync documentation
+description: Install and update CLI tools and agent skills from one JSON config.
+url: https://hades200082.github.io
+baseurl: /env-sync
+lang: en-GB
+markdown: kramdown
+permalink: pretty
+highlighter: rouge
+
+nav:
+  - title: Quick start
+    url: /quick-start/
+  - title: Configuration
+    url: /configuration/
+  - title: Commands
+    url: /commands/
+  - title: Selectors
+    url: /selectors/
+  - title: Config sources
+    url: /config-sources/
+  - title: Troubleshooting
+    url: /troubleshooting/
+  - title: Development
+    url: /development/
+
+exclude:
+  - README.md
+  - _site
+  - .jekyll-cache
